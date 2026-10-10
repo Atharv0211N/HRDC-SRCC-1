@@ -1,0 +1,363 @@
+// HRDC SRCC — Database Schema
+// Human Resource Development Cell, Shri Ram College of Commerce
+// Design Bible V1.0 — Part VIII: Data Architecture
+
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  EDITOR
+}
+
+enum Department {
+  PRESIDENCY
+  RESEARCH_EDITORIAL
+  CREATIVE_TECHNICAL
+  PROJECT_DEVELOPMENT
+  EVENT_CORPORATE
+}
+
+enum EventCategory {
+  FLAGSHIP
+  COMPETITION
+  WORKSHOP
+  SEMINAR
+  SPEAKER_SESSION
+  PANEL_DISCUSSION
+  OTHER
+}
+
+enum PublicationType {
+  MAGAZINE
+  REPORT
+  BLOG
+  NEWSLETTER
+}
+
+enum PartnerCategory {
+  CORPORATE
+  ACADEMIC
+  MEDIA
+  COMMUNITY
+  SPONSOR
+  OTHER
+}
+
+enum ContactStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+}
+
+// ==========================================
+// MODELS
+// ==========================================
+
+/// Admin users for dashboard access
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  name         String
+  role         Role     @default(ADMIN)
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Audit trail
+  auditLogs AuditLog[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+/// Audit log for tracking dashboard changes
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action      String   // CREATE, UPDATE, DELETE
+  entityType  String   @map("entity_type") // TeamMember, Project, Event, etc.
+  entityId    String   @map("entity_id")
+  details     Json?    // What changed
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([entityType])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+/// HRDC cabinet and team members
+model TeamMember {
+  id                 String     @id @default(cuid())
+  name               String
+  designation        String
+  department         Department
+  displayOrder       Int        @default(0) @map("display_order")
+  photo              String     // Cloudinary URL
+  linkedIn           String?    @map("linkedin")
+  term               String     // e.g. "2024-2025"
+  featuredOnHomepage Boolean    @default(false) @map("featured_on_homepage")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
+
+  @@index([term])
+  @@index([department])
+  @@index([displayOrder])
+  @@index([featuredOnHomepage])
+  @@map("team_members")
+}
+
+/// Flagship initiatives and projects
+model Project {
+  id               String    @id @default(cuid())
+  name             String
+  slug             String    @unique
+  shortDescription String    @db.Text @map("short_description")
+  fullDescription  String    @db.Text @map("full_description")
+  coverImage       String    @map("cover_image") // Cloudinary URL
+  gallery          String[]  @default([])
+  objectives       String[]  @default([])
+  activities       String[]  @default([])
+  impactSummary    String?   @db.Text @map("impact_summary")
+  featured         Boolean   @default(false)
+  displayOrder     Int       @default(0) @map("display_order")
+  // Soft delete
+  isDeleted        Boolean   @default(false) @map("is_deleted")
+  deletedAt        DateTime? @map("deleted_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  events       Event[]
+  publications Publication[]
+
+  @@index([slug])
+  @@index([featured])
+  @@index([displayOrder])
+  @@index([isDeleted])
+  @@map("projects")
+}
+
+/// Events and activities
+model Event {
+  id          String        @id @default(cuid())
+  title       String
+  slug        String        @unique
+  date        DateTime
+  endDate     DateTime?     @map("end_date")
+  category    EventCategory
+  description String        @db.Text
+  heroImage   String        @map("hero_image") // Cloudinary URL
+  gallery     String[]      @default([])
+  speakers    Json?         // [{ name, title, organization, photo, linkedIn }]
+  highlights  String[]      @default([])
+  venue       String?
+
+  // Relations
+  relatedProjectId String?  @map("related_project_id")
+  relatedProject   Project? @relation(fields: [relatedProjectId], references: [id], onDelete: SetNull)
+
+  relatedPublicationId String?      @map("related_publication_id")
+  relatedPublication   Publication? @relation(fields: [relatedPublicationId], references: [id], onDelete: SetNull)
+
+  featured  Boolean   @default(false)
+  archived  Boolean   @default(false)
+  // Soft delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([slug])
+  @@index([date])
+  @@index([category])
+  @@index([featured])
+  @@index([archived])
+  @@index([isDeleted])
+  @@index([relatedProjectId])
+  @@index([relatedPublicationId])
+  @@map("events")
+}
+
+/// Publications — magazines, reports, blogs, newsletters
+model Publication {
+  id           String          @id @default(cuid())
+  title        String
+  slug         String          @unique
+  type         PublicationType
+  date         DateTime
+  coverImage   String          @map("cover_image") // Cloudinary URL
+  summary      String          @db.Text
+  content      String?         @db.Text // Markdown content for blogs
+  pdfUrl       String?         @map("pdf_url")
+  externalLink String?         @map("external_link")
+  tags         String[]        @default([])
+  featured     Boolean         @default(false)
+
+  // Relations
+  relatedProjectId String?  @map("related_project_id")
+  relatedProject   Project? @relation(fields: [relatedProjectId], references: [id], onDelete: SetNull)
+
+  relatedEvents Event[]
+
+  // Soft delete
+  isDeleted Boolean   @default(false) @map("is_deleted")
+  deletedAt DateTime? @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@index([slug])
+  @@index([type])
+  @@index([date])
+  @@index([featured])
+  @@index([isDeleted])
+  @@index([relatedProjectId])
+  @@map("publications")
+}
+
+/// Impact metrics and statistics
+model Statistic {
+  id           String   @id @default(cuid())
+  label        String
+  value        String   // e.g. "17+", "25+", "5000+"
+  description  String?  @db.Text
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([displayOrder])
+  @@map("statistics")
+}
+
+/// Institutional and corporate partners
+model Partner {
+  id           String          @id @default(cuid())
+  name         String
+  logo         String          // Cloudinary URL
+  website      String?
+  category     PartnerCategory @default(CORPORATE)
+  displayOrder Int             @default(0) @map("display_order")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+
+  @@index([category])
+  @@index([displayOrder])
+  @@map("partners")
+}
+
+/// Contact form submissions
+model ContactMessage {
+  id           String        @id @default(cuid())
+  name         String
+  email        String
+  organization String?
+  subject      String
+  message      String        @db.Text
+  status       ContactStatus @default(NEW)
+  submittedAt  DateTime      @default(now()) @map("submitted_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([email])
+  @@index([submittedAt])
+  @@map("contact_messages")
+}
+
+/// Dynamic homepage content
+model HomepageContent {
+  id              String  @id @default(cuid())
+  // Hero
+  heroTitle       String  @map("hero_title")
+  heroSubtitle    String? @db.Text @map("hero_subtitle")
+  heroCtaText     String? @map("hero_cta_text")
+  heroCtaLink     String? @map("hero_cta_link")
+  heroSecondaryCtaText String? @map("hero_secondary_cta_text")
+  heroSecondaryCtaLink String? @map("hero_secondary_cta_link")
+  heroImage       String? @map("hero_image") // Cloudinary URL
+
+  // Looking Ahead
+  lookingAheadTitle       String? @map("looking_ahead_title")
+  lookingAheadDescription String? @db.Text @map("looking_ahead_description")
+  lookingAheadItems       Json?   @map("looking_ahead_items") // [{ title, description }]
+
+  // Announcements
+  announcements Json? // [{ text, link, isNew }]
+
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("homepage_content")
+}
+
+/// Global site settings
+model SiteSettings {
+  id              String  @id @default(cuid())
+  orgName         String  @default("Human Resource Development Cell") @map("org_name")
+  institution     String  @default("Shri Ram College of Commerce, University of Delhi")
+  founded         String  @default("2008")
+  motto           String? @default("Enable. Edify. Empower.")
+
+  // Contact
+  primaryEmail    String  @default("hrdc@srcc.du.ac.in") @map("primary_email")
+  phone           String?
+  address         String? @default("Shri Ram College of Commerce, University of Delhi, Maurice Nagar, Delhi - 110007")
+
+  // Social
+  linkedIn  String? @map("linkedin")
+  instagram String?
+
+  // Recruitment
+  recruitmentOpen    Boolean @default(false) @map("recruitment_open")
+  recruitmentFormUrl String? @map("recruitment_form_url")
+
+  // SEO defaults
+  defaultSeoTitle       String? @map("default_seo_title")
+  defaultSeoDescription String? @db.Text @map("default_seo_description")
+  defaultSeoImage       String? @map("default_seo_image") // Cloudinary URL
+
+  // Announcement banner
+  announcementBannerText    String? @map("announcement_banner_text")
+  announcementBannerLink    String? @map("announcement_banner_link")
+  announcementBannerEnabled Boolean @default(false) @map("announcement_banner_enabled")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("site_settings")
+}
+
+/// Media library for centralized asset management
+model MediaAsset {
+  id          String   @id @default(cuid())
+  name        String
+  url         String   // Cloudinary URL
+  publicId    String   @map("public_id") // Cloudinary public ID
+  folder      String   @default("general") // Organizational folder
+  format      String   // jpg, png, pdf, etc.
+  width       Int?
+  height      Int?
+  sizeBytes   Int?     @map("size_bytes")
+  altText     String?  @map("alt_text")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([folder])
+  @@index([publicId])
+  @@index([createdAt])
+  @@map("media_assets")
+}

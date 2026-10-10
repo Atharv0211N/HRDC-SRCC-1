@@ -1,0 +1,194 @@
+@import 'tailwindcss';
+
+/* ============================================
+   HRDC SRCC Design System
+   Design Bible V1.0 — Part III
+   ============================================ */
+
+:root {
+  /* Colors */
+  --primary: #0056D2;
+  --primary-hover: #004AB8;
+  --primary-light: #EBF2FF;
+  --background: #FFFFFF;
+  --surface: #F8FAFC;
+  --border: #E2E8F0;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  --accent-gold: #C8A45D;
+  --accent-gold-light: #FDF8EE;
+  --success: #16A34A;
+  --warning: #F59E0B;
+  --error: #DC2626;
+  --info: #2563EB;
+
+  /* Shadows — 3 levels only */
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 12px 32px -4px rgba(0, 0, 0, 0.12), 0 4px 12px -4px rgba(0, 0, 0, 0.06);
+
+  /* Border Radius */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+
+  /* Transitions */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 500ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Content widths */
+  --max-width: 1280px;
+  --content-width: 800px;
+}
+
+/* ============================================
+   Base Styles
+   ============================================ */
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  color: var(--text-primary);
+  background-color: var(--background);
+}
+
+::selection {
+  background-color: var(--primary);
+  color: white;
+}
+
+/* Focus ring for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ============================================
+   Typography Reset
+   ============================================ */
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+h1 { font-size: clamp(2.5rem, 5vw, 4rem); } /* 40-64px */
+h2 { font-size: clamp(2rem, 4vw, 3rem); }   /* 32-48px */
+h3 { font-size: clamp(1.5rem, 3vw, 2.25rem); font-weight: 600; } /* 24-36px */
+h4 { font-size: clamp(1.25rem, 2vw, 1.75rem); font-weight: 600; } /* 20-28px */
+
+p {
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color var(--duration-fast) ease;
+}
+
+a:hover {
+  color: var(--primary-hover);
+}
+
+/* ============================================
+   Section Spacing Utilities
+   ============================================ */
+
+.section-padding {
+  padding-top: 6rem;    /* 96px */
+  padding-bottom: 6rem;
+}
+
+@media (max-width: 768px) {
+  .section-padding {
+    padding-top: 4rem;   /* 64px */
+    padding-bottom: 4rem;
+  }
+}
+
+.section-padding-lg {
+  padding-top: 8rem;    /* 128px */
+  padding-bottom: 8rem;
+}
+
+@media (max-width: 768px) {
+  .section-padding-lg {
+    padding-top: 5rem;   /* 80px */
+    padding-bottom: 5rem;
+  }
+}
+
+/* ============================================
+   Container
+   ============================================ */
+
+.container-main {
+  width: 100%;
+  max-width: var(--max-width);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .container-main {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+.content-width {
+  max-width: var(--content-width);
+}
+
+/* ============================================
+   Reduced Motion
+   ============================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================
+   Scrollbar
+   ============================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
