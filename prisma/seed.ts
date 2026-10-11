@@ -1,7 +1,6 @@
-import { PrismaClient, Role, Department, EventCategory, PublicationType, PartnerCategory } from '@prisma/client';
+import { Role, Department, EventCategory, PublicationType, PartnerCategory } from '@prisma/client';
 import { hash } from 'bcryptjs';
-
-const prisma = new PrismaClient();
+import { prisma } from '../src/lib/prisma';
 
 async function main() {
   console.log('🌱 Seeding HRDC SRCC database...\n');
