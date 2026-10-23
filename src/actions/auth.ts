@@ -10,14 +10,21 @@ export async function authenticate(
   formData: FormData,
 ) {
   try {
-    await signIn('credentials', Object.fromEntries(formData));
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+    
+    await signIn('credentials', {
+      email,
+      password,
+      redirectTo: '/dashboard',
+    });
   } catch (error) {
     if (error instanceof AuthError) {
       switch (error.type) {
         case 'CredentialsSignin':
           return 'Invalid credentials.';
         default:
-          return 'Something went wrong.';
+          return 'Authentication failed. Please verify credentials or database connection.';
       }
     }
     throw error;
@@ -36,28 +43,28 @@ export async function createUser(data: any) {
       email: data.email,
       name: data.name,
       passwordHash: hashedPassword,
-      role: data.role || 'EDITOR'
-}
-});
+      role: data.role || 'EDITOR',
+    },
+  });
 }
 
 export async function updateUserRole(userId: string, role: string) {
   return await prisma.user.update({
     where: { id: userId },
-    data: { role: role as any }
-});
+    data: { role: role as any },
+  });
 }
 
 export async function deleteUser(userId: string) {
   return await prisma.user.delete({
-    where: { id: userId }
-});
+    where: { id: userId },
+  });
 }
 
 export async function resetPassword(userId: string, newPassword: string) {
   const hashedPassword = await bcryptjs.hash(newPassword, 10);
   return await prisma.user.update({
     where: { id: userId },
-    data: { passwordHash: hashedPassword }
-});
+    data: { passwordHash: hashedPassword },
+  });
 }
