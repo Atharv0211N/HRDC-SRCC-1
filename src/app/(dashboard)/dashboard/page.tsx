@@ -49,7 +49,7 @@ export default async function DashboardPage() {
       orderBy: { submittedAt: 'desc' },
     }),
     // @ts-ignore - Assuming AuditLog model exists based on requirements
-    prisma.auditLog?.findMany({
+    prisma.auditLog.findMany({ include: { user: { select: { email: true } } },
       take: 5,
       orderBy: { createdAt: 'desc' },
     }).catch(() => [])
@@ -177,7 +177,7 @@ export default async function DashboardPage() {
                       <div>
                         <p className="text-sm text-[#0F172A]">{log.action} <span className="font-medium">{log.entityType}</span></p>
                         <p className="text-xs text-[#64748B] mt-1">
-                          By {log.userEmail} • {new Date(log.createdAt).toLocaleDateString()}
+                          By {(log.user?.email || 'Admin')} • {new Date(log.createdAt).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
