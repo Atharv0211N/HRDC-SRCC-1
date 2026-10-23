@@ -2,20 +2,26 @@
 
 /* ============================================
    HRDC SRCC Design System
-   Design Bible V1.0 — Part III
+   Design Bible V1.0 — Premium Refinement
    ============================================ */
 
 :root {
-  /* Colors */
+  /* Brand Palette */
   --primary: #0056D2;
-  --primary-hover: #004AB8;
+  --primary-hover: #0045A8;
   --primary-light: #EBF2FF;
+  --primary-glow: rgba(0, 86, 210, 0.15);
+  
   --background: #FFFFFF;
   --surface: #F8FAFC;
+  --surface-card: #FFFFFF;
   --border: #E2E8F0;
+  --border-subtle: #F1F5F9;
+
   --text-primary: #0F172A;
   --text-secondary: #475569;
   --text-muted: #64748B;
+  
   --accent-gold: #C8A45D;
   --accent-gold-light: #FDF8EE;
   --success: #16A34A;
@@ -23,22 +29,16 @@
   --error: #DC2626;
   --info: #2563EB;
 
-  /* Shadows — 3 levels only */
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 12px 32px -4px rgba(0, 0, 0, 0.12), 0 4px 12px -4px rgba(0, 0, 0, 0.06);
+  /* Shadows — Refined layered elevation */
+  --shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.05);
+  --shadow-md: 0 4px 16px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -2px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 16px 36px -6px rgba(15, 23, 42, 0.12), 0 6px 16px -4px rgba(15, 23, 42, 0.06);
+  --shadow-glow: 0 0 25px rgba(0, 86, 210, 0.2);
 
   /* Border Radius */
   --radius-sm: 10px;
   --radius-md: 14px;
   --radius-lg: 18px;
-
-  /* Transitions */
-  --duration-fast: 150ms;
-  --duration-normal: 250ms;
-  --duration-slow: 500ms;
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
   /* Content widths */
   --max-width: 1280px;
@@ -58,6 +58,7 @@ html {
 body {
   color: var(--text-primary);
   background-color: var(--background);
+  overflow-x: hidden;
 }
 
 ::selection {
@@ -65,7 +66,6 @@ body {
   color: white;
 }
 
-/* Focus ring for keyboard navigation */
 *:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
@@ -73,67 +73,93 @@ body {
 }
 
 /* ============================================
-   Typography Reset
+   Custom Gradients & Micro-Animations
    ============================================ */
 
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--text-primary);
-  letter-spacing: -0.02em;
+@keyframes pulseGlow {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 0.7;
+  }
 }
 
-h1 { font-size: clamp(2.5rem, 5vw, 4rem); } /* 40-64px */
-h2 { font-size: clamp(2rem, 4vw, 3rem); }   /* 32-48px */
-h3 { font-size: clamp(1.5rem, 3vw, 2.25rem); font-weight: 600; } /* 24-36px */
-h4 { font-size: clamp(1.25rem, 2vw, 1.75rem); font-weight: 600; } /* 20-28px */
-
-p {
-  color: var(--text-secondary);
-  line-height: 1.7;
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
-a {
-  color: var(--primary);
-  text-decoration: none;
-  transition: color var(--duration-fast) ease;
+.animate-pulse-glow {
+  animation: pulseGlow 8s ease-in-out infinite;
 }
 
-a:hover {
-  color: var(--primary-hover);
+.animate-float {
+  animation: floatSlow 6s ease-in-out infinite;
 }
 
-/* ============================================
-   Section Spacing Utilities
-   ============================================ */
+/* Subtle dot-grid pattern for institutional elegance */
+.bg-grid-pattern {
+  background-image: radial-gradient(rgba(15, 23, 42, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
 
+/* Glassmorphism utility */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+/* Sleek card hover lift */
+.card-hover-lift {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+}
+
+.card-hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 30px -10px rgba(0, 86, 210, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.04);
+  border-color: rgba(0, 86, 210, 0.25);
+}
+
+/* Gradient text accent */
+.gradient-text-primary {
+  background: linear-gradient(135deg, #0056D2 0%, #1D4ED8 50%, #4338CA 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Section Spacing Utilities */
 .section-padding {
-  padding-top: 6rem;    /* 96px */
+  padding-top: 6rem;
   padding-bottom: 6rem;
 }
 
 @media (max-width: 768px) {
   .section-padding {
-    padding-top: 4rem;   /* 64px */
+    padding-top: 4rem;
     padding-bottom: 4rem;
   }
 }
 
 .section-padding-lg {
-  padding-top: 8rem;    /* 128px */
+  padding-top: 8rem;
   padding-bottom: 8rem;
 }
 
 @media (max-width: 768px) {
   .section-padding-lg {
-    padding-top: 5rem;   /* 80px */
+    padding-top: 5rem;
     padding-bottom: 5rem;
   }
 }
-
-/* ============================================
-   Container
-   ============================================ */
 
 .container-main {
   width: 100%;
@@ -155,27 +181,7 @@ a:hover {
   max-width: var(--content-width);
 }
 
-/* ============================================
-   Reduced Motion
-   ============================================ */
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* ============================================
-   Scrollbar
-   ============================================ */
-
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
 }

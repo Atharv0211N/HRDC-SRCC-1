@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { cn } from '@/lib/utils';
 
 interface StatCardProps {
   value: string;
@@ -21,7 +20,6 @@ export function StatCard({ value, label, description }: StatCardProps) {
   const suffix = value.substring(value.indexOf(targetNumber.toString()) + targetNumber.toString().length);
 
   useEffect(() => {
-    // Respect prefers-reduced-motion
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     
     if (prefersReducedMotion) {
@@ -34,13 +32,11 @@ export function StatCard({ value, label, description }: StatCardProps) {
       (entries) => {
         if (entries[0].isIntersecting && !hasAnimated) {
           let startTimestamp: number | null = null;
-          const duration = 1500; // 1.5s
+          const duration = 1600;
           
           const step = (timestamp: number) => {
             if (!startTimestamp) startTimestamp = timestamp;
             const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-            
-            // easeOutQuart
             const easeProgress = 1 - Math.pow(1 - progress, 4);
             
             setCount(Math.floor(easeProgress * targetNumber));
@@ -70,16 +66,18 @@ export function StatCard({ value, label, description }: StatCardProps) {
   return (
     <div 
       ref={elementRef}
-      className="flex flex-col p-8 bg-white rounded-[14px] border border-[#E2E8F0] shadow-sm items-center text-center hover:shadow-md transition-shadow duration-300"
+      className="relative flex flex-col p-8 bg-white rounded-[16px] border border-[#E2E8F0] card-hover-lift items-center text-center overflow-hidden"
     >
-      <div className="text-4xl md:text-5xl font-bold text-[#0056D2] mb-3 tracking-tight">
+      <div className="absolute top-0 right-0 w-28 h-28 bg-blue-500/5 rounded-full blur-xl pointer-events-none" />
+      
+      <div className="text-4xl md:text-5xl font-extrabold text-[#0056D2] mb-3 tracking-tight">
         {prefix}{count}{suffix}
       </div>
-      <h3 className="text-lg font-bold text-[#0F172A] mb-2 uppercase tracking-wide">
+      <h3 className="text-sm font-bold text-[#0F172A] mb-2 uppercase tracking-wider">
         {label}
       </h3>
       {description && (
-        <p className="text-[15px] text-[#475569] leading-relaxed">
+        <p className="text-[14px] text-[#475569] leading-relaxed max-w-xs">
           {description}
         </p>
       )}
