@@ -4,30 +4,36 @@ import { prisma } from '@/lib/prisma';
 import { auth } from '@/auth';
 import { teamMemberSchema } from '@/lib/validations';
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
 
 // Helper to log admin actions
 async function createAuditLog(action: string, entityType: string, entityId: string, details?: string) {
   try {
     const session = await auth();
     if (!session || !session.user) return;
-    
-    // Check if AuditLog model exists before trying to write to it
     if ('auditLog' in prisma) {
       // @ts-ignore
       await prisma.auditLog.create({
-        data: {
-          action,
-          entityType,
-          entityId,
-          details,
-          userId: session.user.id || ''
-}
+        data: { action, entityType, entityId, details, userId: session.user.id || '' }
       });
     }
   } catch (error) {
     console.error('Failed to create audit log:', error);
   }
+}
+
+/** Extract plain object from FormData or pass through if already a plain object */
+function extractTeamMemberData(data: FormData | Record<string, unknown>) {
+  if (!(data instanceof FormData)) return data;
+  return {
+    name: (data.get('name') as string) || '',
+    designation: (data.get('designation') as string) || '',
+    department: (data.get('department') as string) || '',
+    photo: (data.get('photo') as string) || '',
+    linkedIn: (data.get('linkedIn') as string) || undefined,
+    term: (data.get('term') as string) || '',
+    displayOrder: parseInt((data.get('displayOrder') as string) || '0', 10) || 0,
+    featuredOnHomepage: data.get('featuredOnHomepage') === 'on' || data.get('featuredOnHomepage') === 'true',
+  };
 }
 
 export async function getTeamMembers() {
@@ -44,49 +50,52 @@ export async function getTeamMembers() {
   }
 }
 
-export async function createTeamMember(data: any) {
+export async function createTeamMember(data: FormData | Record<string, unknown>) {
   const session = await auth();
   if (!session) throw new Error('Unauthorized');
 
   try {
-    const validatedData = teamMemberSchema.parse(data);
-    
+    const raw = extractTeamMemberData(data);
+    const validatedData = teamMemberSchema.parse(raw);
+
     const member = await prisma.teamMember.create({
       data: validatedData
     });
 
     await createAuditLog('CREATE', 'TeamMember', member.id);
-    
+
     revalidatePath('/dashboard/team');
     revalidatePath('/team');
-    
+
     return { success: true, data: member };
   } catch (error) {
-    console.error(error);
-    return { success: false, error: 'Failed to create team member' };
+    console.error('createTeamMember error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to create team member' };
   }
 }
 
-export async function updateTeamMember(id: string, data: any) {
+export async function updateTeamMember(id: string, data: FormData | Record<string, unknown>) {
   const session = await auth();
   if (!session) throw new Error('Unauthorized');
 
   try {
-    const validatedData = teamMemberSchema.parse(data);
-    
+    const raw = extractTeamMemberData(data);
+    const validatedData = teamMemberSchema.parse(raw);
+
     const member = await prisma.teamMember.update({
       where: { id },
       data: validatedData
     });
 
     await createAuditLog('UPDATE', 'TeamMember', id);
-    
+
     revalidatePath('/dashboard/team');
     revalidatePath('/team');
-    
+
     return { success: true, data: member };
   } catch (error) {
-    return { success: false, error: 'Failed to update team member' };
+    console.error('updateTeamMember error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to update team member' };
   }
 }
 
@@ -100,10 +109,10 @@ export async function deleteTeamMember(id: string) {
     });
 
     await createAuditLog('DELETE', 'TeamMember', id);
-    
+
     revalidatePath('/dashboard/team');
     revalidatePath('/team');
-    
+
     return { success: true };
   } catch (error) {
     return { success: false, error: 'Failed to delete team member' };
@@ -115,9 +124,8 @@ export async function reorderTeamMembers(orderedIds: string[]) {
   if (!session) throw new Error('Unauthorized');
 
   try {
-    // Run all updates in a transaction
     await prisma.$transaction(
-      orderedIds.map((id, index) => 
+      orderedIds.map((id, index) =>
         prisma.teamMember.update({
           where: { id },
           data: { displayOrder: index }
@@ -126,10 +134,10 @@ export async function reorderTeamMembers(orderedIds: string[]) {
     );
 
     await createAuditLog('REORDER', 'TeamMember', 'multiple');
-    
+
     revalidatePath('/dashboard/team');
     revalidatePath('/team');
-    
+
     return { success: true };
   } catch (error) {
     return { success: false, error: 'Failed to reorder team members' };

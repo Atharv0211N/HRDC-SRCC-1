@@ -6,20 +6,23 @@ export async function getHomepageContent() {
   let content = await prisma.homepageContent.findFirst();
   if (!content) {
     content = await prisma.homepageContent.create({
-      data: {
-        heroTitle: "Human Resource Development Cell"
-}
+      data: { heroTitle: "Human Resource Development Cell" }
     });
   }
   return content;
 }
 
-export async function updateHomepageContent(data: any) {
-  const content = await getHomepageContent();
-  await prisma.homepageContent.update({
-    where: { id: content.id },
-    data
-  });
-  revalidatePath("/");
-  revalidatePath("/dashboard/homepage");
+export async function updateHomepageContent(data: any): Promise<{ success: boolean; error?: string }> {
+  try {
+    const content = await getHomepageContent();
+    await prisma.homepageContent.update({
+      where: { id: content.id },
+      data
+    });
+    revalidatePath("/");
+    revalidatePath("/dashboard/homepage");
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e?.message || "Failed to update homepage content." };
+  }
 }

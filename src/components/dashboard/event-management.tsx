@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Pencil, Trash2, RotateCcw, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Plus, Pencil, Trash2, RotateCcw, X, AlertCircle } from 'lucide-react';
 import { createEvent, updateEvent, softDeleteEvent, restoreEvent } from '@/actions/events';
 import { Event } from '@prisma/client';
 import { EVENT_CATEGORY_LABELS } from '@/lib/constants';
@@ -12,32 +11,47 @@ interface Props {
   initialData: Event[];
 }
 
+const EVENT_CAT_OPTIONS = [
+  { value: 'FLAGSHIP', label: 'Flagship' },
+  { value: 'COMPETITION', label: 'Competition' },
+  { value: 'WORKSHOP', label: 'Workshop' },
+  { value: 'SEMINAR', label: 'Seminar' },
+  { value: 'SPEAKER_SESSION', label: 'Speaker Session' },
+  { value: 'PANEL_DISCUSSION', label: 'Panel Discussion' },
+  { value: 'OTHER', label: 'Other' },
+];
+
 export function EventManagement({ initialData }: Props) {
-  const [data, setData] = useState(initialData);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Event | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'archived'>('all');
+  const [formError, setFormError] = useState<string | null>(null);
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
+    setFormError(null);
     const formData = new FormData(e.currentTarget);
-    
+
     try {
+      let result: any;
       if (editingItem) {
-        await updateEvent(editingItem.id, formData);
+        result = await updateEvent(editingItem.id, formData);
       } else {
-        await createEvent(formData);
+        result = await createEvent(formData);
+      }
+      if (result?.success === false) {
+        setFormError(result.error || 'Failed to save event.');
+        return;
       }
       setIsFormOpen(false);
       setEditingItem(null);
       router.refresh();
-    } catch (error) {
-      console.error(error);
-      alert('An error occurred while saving.');
+    } catch (error: any) {
+      setFormError(error?.message || 'An unexpected error occurred.');
     } finally {
       setIsSubmitting(false);
     }
@@ -48,38 +62,40 @@ export function EventManagement({ initialData }: Props) {
       setIsDeleting(null);
       return;
     }
-    
     try {
-      await softDeleteEvent(id);
+      const result = await softDeleteEvent(id);
+      if (result?.success === false) {
+        alert(result.error || 'Failed to delete.');
+        return;
+      }
       setIsDeleting(null);
       router.refresh();
-    } catch (error) {
-      console.error(error);
-      alert('An error occurred while deleting.');
+    } catch (error: any) {
+      alert(error?.message || 'An error occurred while deleting.');
     }
   }
 
   async function handleRestore(id: string) {
     try {
-      await restoreEvent(id);
+      const result = await restoreEvent(id);
+      if (result?.success === false) {
+        alert(result.error || 'Failed to restore.');
+        return;
+      }
       router.refresh();
-    } catch (error) {
-      console.error(error);
-      alert('An error occurred while restoring.');
+    } catch (error: any) {
+      alert(error?.message || 'An error occurred while restoring.');
     }
   }
 
   function openForm(item?: Event) {
-    if (item) {
-      setEditingItem(item);
-    } else {
-      setEditingItem(null);
-    }
+    setEditingItem(item || null);
+    setFormError(null);
     setIsFormOpen(true);
   }
 
   const filteredData = initialData.filter(item => {
-    if (item.isDeleted) return false; // Default: hide deleted, though maybe we want another filter
+    if (item.isDeleted) return false;
     if (filter === 'all') return true;
     if (filter === 'archived') return item.archived;
     if (filter === 'upcoming') return !item.archived;
@@ -91,7 +107,7 @@ export function EventManagement({ initialData }: Props) {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-[#0F172A]">Event Management</h1>
         <div className="flex gap-4 items-center">
-          <select 
+          <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as any)}
             className="rounded-[10px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] focus:border-[#0056D2] focus:outline-none"
@@ -128,15 +144,17 @@ export function EventManagement({ initialData }: Props) {
               {filteredData.map((event) => (
                 <tr key={event.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4">
-                    <img 
-                      src={event.heroImage || 'https://via.placeholder.com/60x40'} 
-                      alt={event.title} 
+                    <img
+                      src={event.heroImage || 'https://placehold.co/60x40/E2E8F0/94A3B8?text=No+Image'}
+                      alt={event.title}
                       className="h-10 w-16 rounded-[6px] object-cover border border-[#E2E8F0]"
                     />
                   </td>
                   <td className="px-6 py-4 font-medium text-[#0F172A]">{event.title}</td>
                   <td className="px-6 py-4">{new Date(event.date).toLocaleDateString()}</td>
-                  <td className="px-6 py-4">{EVENT_CATEGORY_LABELS[event.category] || event.category}</td>
+                  <td className="px-6 py-4">
+                    {(EVENT_CATEGORY_LABELS as any)?.[event.category] || event.category}
+                  </td>
                   <td className="px-6 py-4">
                     {event.featured ? (
                       <span className="inline-flex rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">Yes</span>
@@ -161,10 +179,7 @@ export function EventManagement({ initialData }: Props) {
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => {
-                          setIsDeleting(event.id);
-                          handleDelete(event.id);
-                        }}
+                        onClick={() => { setIsDeleting(event.id); handleDelete(event.id); }}
                         disabled={isDeleting === event.id}
                         className="rounded-[10px] p-2 text-[#64748B] hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
                         title="Delete"
@@ -178,7 +193,7 @@ export function EventManagement({ initialData }: Props) {
               {filteredData.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-6 py-8 text-center text-[#64748B]">
-                    No events found.
+                    No events found. Click &apos;Add Event&apos; to create one.
                   </td>
                 </tr>
               )}
@@ -195,139 +210,146 @@ export function EventManagement({ initialData }: Props) {
                 <h2 className="text-xl font-semibold text-[#0F172A]">
                   {editingItem ? 'Edit Event' : 'Add Event'}
                 </h2>
-                <button 
+                <button
                   onClick={() => setIsFormOpen(false)}
                   className="rounded-full p-2 text-[#64748B] hover:bg-slate-100"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              
+
+              {formError && (
+                <div className="mb-4 flex items-start gap-2 rounded-[10px] bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>{formError}</span>
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-[#475569] mb-1">Title</label>
-                  <input 
-                    type="text" 
-                    name="title" 
+                  <label className="block text-sm font-medium text-[#475569] mb-1">Title *</label>
+                  <input
+                    type="text"
+                    name="title"
                     required
                     defaultValue={editingItem?.title}
-                    className="w-full rounded-[10px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] focus:border-[#0056D2] focus:outline-none focus:ring-1 focus:ring-[#0056D2]" 
+                    className="w-full rounded-[10px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] focus:border-[#0056D2] focus:outline-none focus:ring-1 focus:ring-[#0056D2]"
                   />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-[#475569] mb-1">Slug</label>
-                  <input 
-                    type="text" 
-                    name="slug" 
+                  <label className="block text-sm font-medium text-[#475569] mb-1">Slug (auto-generated if empty)</label>
+                  <input
+                    type="text"
+                    name="slug"
                     defaultValue={editingItem?.slug}
-                    className="w-full rounded-[10px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] focus:border-[#0056D2] focus:outline-none focus:ring-1 focus:ring-[#0056D2]" 
+                    className="w-full rounded-[10px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] focus:border-[#0056D2] focus:outline-none focus:ring-1 focus:ring-[#0056D2]"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-[#475569] mb-1">Start Date</label>
-                    <input 
-                      type="datetime-local" 
-                      name="date" 
+                    <label className="block text-sm font-medium text-[#475569] mb-1">Start Date *</label>
+                    <input
+                      type="datetime-local"
+                      name="date"
                       required
                       defaultValue={editingItem?.date ? new Date(editingItem.date).toISOString().slice(0, 16) : ''}
-                      className="w-full rounded-[10px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] focus:border-[#0056D2] focus:outline-none focus:ring-1 focus:ring-[#0056D2]" 
+                      className="w-full rounded-[10px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] focus:border-[#0056D2] focus:outline-none focus:ring-1 focus:ring-[#0056D2]"
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-[#475569] mb-1">End Date</label>
-                    <input 
-                      type="datetime-local" 
-                      name="endDate" 
+                    <input
+                      type="datetime-local"
+                      name="endDate"
                       defaultValue={editingItem?.endDate ? new Date(editingItem.endDate).toISOString().slice(0, 16) : ''}
-                      className="w-full rounded-[10px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] focus:border-[#0056D2] focus:outline-none focus:ring-1 focus:ring-[#0056D2]" 
+                      className="w-full rounded-[10px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] focus:border-[#0056D2] focus:outline-none focus:ring-1 focus:ring-[#0056D2]"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#475569] mb-1">Category</label>
-                  <select 
-                    name="category" 
+                  <label className="block text-sm font-medium text-[#475569] mb-1">Category *</label>
+                  <select
+                    name="category"
                     required
                     defaultValue={editingItem?.category}
                     className="w-full rounded-[10px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] focus:border-[#0056D2] focus:outline-none focus:ring-1 focus:ring-[#0056D2]"
                   >
                     <option value="">Select a category</option>
-                    {Object.entries(EVENT_CATEGORY_LABELS || {}).map(([key, label]) => (
-                      <option key={key} value={key}>{label as string}</option>
+                    {EVENT_CAT_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
-                    <option value="WORKSHOP">Workshop</option>
-                    <option value="SEMINAR">Seminar</option>
-                    <option value="COMPETITION">Competition</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#475569] mb-1">Description</label>
-                  <textarea 
-                    name="description" 
+                  <label className="block text-sm font-medium text-[#475569] mb-1">Description * (min 20 chars)</label>
+                  <textarea
+                    name="description"
                     rows={4}
+                    required
                     defaultValue={editingItem?.description || ''}
-                    className="w-full rounded-[10px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] focus:border-[#0056D2] focus:outline-none focus:ring-1 focus:ring-[#0056D2]" 
+                    className="w-full rounded-[10px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] focus:border-[#0056D2] focus:outline-none focus:ring-1 focus:ring-[#0056D2]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#475569] mb-1">Hero Image URL</label>
-                  <input 
-                    type="url" 
-                    name="heroImage" 
+                  <label className="block text-sm font-medium text-[#475569] mb-1">Hero Image URL *</label>
+                  <input
+                    type="url"
+                    name="heroImage"
+                    required
                     defaultValue={editingItem?.heroImage || ''}
-                    className="w-full rounded-[10px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] focus:border-[#0056D2] focus:outline-none focus:ring-1 focus:ring-[#0056D2]" 
+                    className="w-full rounded-[10px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] focus:border-[#0056D2] focus:outline-none focus:ring-1 focus:ring-[#0056D2]"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-[#475569] mb-1">Venue</label>
-                  <input 
-                    type="text" 
-                    name="venue" 
+                  <input
+                    type="text"
+                    name="venue"
                     defaultValue={editingItem?.venue || ''}
-                    className="w-full rounded-[10px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] focus:border-[#0056D2] focus:outline-none focus:ring-1 focus:ring-[#0056D2]" 
+                    className="w-full rounded-[10px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] focus:border-[#0056D2] focus:outline-none focus:ring-1 focus:ring-[#0056D2]"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-[#475569] mb-1">Related Project ID (optional)</label>
-                  <input 
-                    type="text" 
-                    name="relatedProjectId" 
-                    defaultValue={editingItem?.relatedProjectId || ''}
-                    className="w-full rounded-[10px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] focus:border-[#0056D2] focus:outline-none focus:ring-1 focus:ring-[#0056D2]" 
+                  <label className="block text-sm font-medium text-[#475569] mb-1">Highlights (comma-separated)</label>
+                  <input
+                    type="text"
+                    name="highlights"
+                    defaultValue={(editingItem?.highlights as string[])?.join(', ') || ''}
+                    placeholder="500+ attendees, 3 keynote speakers, ..."
+                    className="w-full rounded-[10px] border border-[#E2E8F0] px-3 py-2 text-sm text-[#0F172A] focus:border-[#0056D2] focus:outline-none focus:ring-1 focus:ring-[#0056D2]"
                   />
                 </div>
 
                 <div className="flex flex-col gap-2 mt-2">
                   <div className="flex items-center gap-2">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       id="featured"
-                      name="featured" 
+                      name="featured"
                       defaultChecked={editingItem?.featured}
-                      className="h-4 w-4 rounded border-[#E2E8F0] text-[#0056D2] focus:ring-[#0056D2]" 
+                      className="h-4 w-4 rounded border-[#E2E8F0] text-[#0056D2] focus:ring-[#0056D2]"
                     />
                     <label htmlFor="featured" className="text-sm font-medium text-[#475569]">
-                      Feature Event
+                      Feature Event (shown on homepage)
                     </label>
                   </div>
                   <div className="flex items-center gap-2">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       id="archived"
-                      name="archived" 
+                      name="archived"
                       defaultChecked={editingItem?.archived}
-                      className="h-4 w-4 rounded border-[#E2E8F0] text-[#0056D2] focus:ring-[#0056D2]" 
+                      className="h-4 w-4 rounded border-[#E2E8F0] text-[#0056D2] focus:ring-[#0056D2]"
                     />
                     <label htmlFor="archived" className="text-sm font-medium text-[#475569]">
-                      Archived
+                      Mark as Archived (past event)
                     </label>
                   </div>
                 </div>
@@ -345,7 +367,7 @@ export function EventManagement({ initialData }: Props) {
                     disabled={isSubmitting}
                     className="rounded-[10px] bg-[#0056D2] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-colors disabled:opacity-50"
                   >
-                    {isSubmitting ? 'Saving...' : 'Save'}
+                    {isSubmitting ? 'Saving...' : 'Save Event'}
                   </button>
                 </div>
               </form>
