@@ -1,6 +1,8 @@
 import type { NextAuthConfig } from 'next-auth';
 
 export const authConfig = {
+  trustHost: true,
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || 'hrdc-srcc-super-secret-jwt-key-2024-production',
   pages: {
     signIn: '/login',
   },

@@ -10,8 +10,8 @@ export async function authenticate(
   formData: FormData,
 ) {
   try {
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
+    const email = ((formData.get('email') as string) || '').trim().toLowerCase();
+    const password = (formData.get('password') as string) || '';
     
     await signIn('credentials', {
       email,
@@ -22,7 +22,7 @@ export async function authenticate(
     if (error instanceof AuthError) {
       switch (error.type) {
         case 'CredentialsSignin':
-          return 'Invalid credentials.';
+          return 'Invalid email or password.';
         default:
           return 'Authentication failed. Please verify credentials or database connection.';
       }

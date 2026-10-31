@@ -1,14 +1,6 @@
 import type { Metadata, Viewport } from 'next';
-import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { AnalyticsProvider } from '@/components/shared/analytics-provider';
-
-const plusJakartaSans = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-primary',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: {
@@ -61,13 +53,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${plusJakartaSans.variable}`}
-    >
-      <body
-        className="font-[family-name:var(--font-primary)] antialiased"
-      >
+    <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      </head>
+      <body className="font-[family-name:var(--font-primary)] antialiased">
         <div className="flex min-h-screen flex-col">
           {children}
           <AnalyticsProvider />
