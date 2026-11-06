@@ -18,16 +18,31 @@ export async function authenticate(
       password,
       redirectTo: '/dashboard',
     });
-  } catch (error) {
-    if (error instanceof AuthError) {
-      switch (error.type) {
-        case 'CredentialsSignin':
-          return 'Invalid email or password.';
-        default:
-          return 'Authentication failed. Please verify credentials or database connection.';
-      }
+  } catch (error: any) {
+    // Next.js redirection works by throwing a NEXT_REDIRECT error.
+    // This MUST be rethrown so Next.js can complete the navigation.
+    if (
+      error?.digest?.startsWith?.('NEXT_REDIRECT') ||
+      error?.message === 'NEXT_REDIRECT' ||
+      error?.name === 'RedirectError'
+    ) {
+      throw error;
     }
-    throw error;
+
+    console.error('[authenticate error]:', error);
+
+    // If it is an authentication error (bad password, user not found, etc.)
+    if (
+      error instanceof AuthError ||
+      error?.name === 'AuthError' ||
+      error?.type === 'CredentialsSignin' ||
+      error?.message?.includes?.('CredentialsSignin')
+    ) {
+      return 'Invalid email or password. Please try again.';
+    }
+
+    // Never rethrow unknown errors to avoid crashing into error.tsx
+    return error?.message || 'Authentication failed. Please verify credentials.';
   }
 }
 

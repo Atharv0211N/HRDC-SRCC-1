@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import Link from 'next/link';
 import { 
   LayoutDashboard, 
   Users, 
@@ -14,12 +13,8 @@ import {
   Settings, 
   Shield, 
   Image as ImageIcon,
-  LogOut,
-  Menu,
-  X
 } from 'lucide-react';
 import DashboardShell from './DashboardShell';
-
 
 export const metadata = {
   title: 'Admin Dashboard | HRDC SRCC',
@@ -33,11 +28,11 @@ export default async function DashboardLayout({
 }) {
   const session = await auth();
 
-  if (!session) {
+  if (!session || !session.user) {
     redirect('/login');
   }
 
-  const role = session.user.role;
+  const role = session.user.role || 'ADMIN';
 
   const navItems = [
     { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
@@ -57,7 +52,7 @@ export default async function DashboardLayout({
   return (
     <DashboardShell 
       navItems={navItems} 
-      user={{ name: session.user.name || 'Admin', role: role as string }}
+      user={{ name: session.user.name || session.user.email || 'Admin', role: role as string }}
     >
       {children}
     </DashboardShell>

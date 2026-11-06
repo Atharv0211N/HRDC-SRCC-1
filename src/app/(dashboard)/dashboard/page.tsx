@@ -21,39 +21,55 @@ export const metadata = {
 export default async function DashboardPage() {
   const session = await auth();
 
-  if (!session) {
+  if (!session || !session.user) {
     redirect('/login');
   }
 
-  // Fetch stats concurrently
-  const [
-    projectsCount,
-    eventsCount,
-    publicationsCount,
-    teamCount,
-    partnersCount,
-    totalMessages,
-    newMessages,
-    recentMessages,
-    recentLogs
-  ] = await Promise.all([
-    prisma.project.count({ where: { isDeleted: false } }),
-    prisma.event.count({ where: { isDeleted: false } }),
-    prisma.publication.count({ where: { isDeleted: false } }),
-    prisma.teamMember.count(),
-    prisma.partner.count(),
-    prisma.contactMessage.count(),
-    prisma.contactMessage.count({ where: { status: 'NEW' } }),
-    prisma.contactMessage.findMany({
-      take: 5,
-      orderBy: { submittedAt: 'desc' },
-    }),
-    // @ts-ignore - Assuming AuditLog model exists based on requirements
-    prisma.auditLog.findMany({ include: { user: { select: { email: true } } },
-      take: 5,
-      orderBy: { createdAt: 'desc' },
-    }).catch(() => [])
-  ]);
+  // Fetch stats concurrently with safe error fallbacks
+  let projectsCount = 0;
+  let eventsCount = 0;
+  let publicationsCount = 0;
+  let teamCount = 0;
+  let partnersCount = 0;
+  let totalMessages = 0;
+  let newMessages = 0;
+  let recentMessages: any[] = [];
+  let recentLogs: any[] = [];
+
+  try {
+    const results = await Promise.all([
+      prisma.project.count({ where: { isDeleted: false } }).catch(() => 0),
+      prisma.event.count({ where: { isDeleted: false } }).catch(() => 0),
+      prisma.publication.count({ where: { isDeleted: false } }).catch(() => 0),
+      prisma.teamMember.count().catch(() => 0),
+      prisma.partner.count().catch(() => 0),
+      prisma.contactMessage.count().catch(() => 0),
+      prisma.contactMessage.count({ where: { status: 'NEW' } }).catch(() => 0),
+      prisma.contactMessage.findMany({
+        take: 5,
+        orderBy: { submittedAt: 'desc' },
+      }).catch(() => []),
+      prisma.auditLog.findMany({
+        include: { user: { select: { email: true } } },
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+      }).catch(() => []),
+    ]);
+
+    [
+      projectsCount,
+      eventsCount,
+      publicationsCount,
+      teamCount,
+      partnersCount,
+      totalMessages,
+      newMessages,
+      recentMessages,
+      recentLogs,
+    ] = results;
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+  }
 
   const stats = [
     { label: 'Projects', value: projectsCount, icon: FolderOpen, href: '/dashboard/projects' },
@@ -65,17 +81,17 @@ export default async function DashboardPage() {
   ];
 
   const quickActions = [
-    { label: 'Add Project', href: '/dashboard/projects/new', icon: PlusCircle },
-    { label: 'Add Event', href: '/dashboard/events/new', icon: PlusCircle },
-    { label: 'Add Publication', href: '/dashboard/publications/new', icon: PlusCircle },
-    { label: 'Add Team Member', href: '/dashboard/team/new', icon: PlusCircle },
+    { label: 'Add Project', href: '/dashboard/projects', icon: PlusCircle },
+    { label: 'Add Event', href: '/dashboard/events', icon: PlusCircle },
+    { label: 'Add Publication', href: '/dashboard/publications', icon: PlusCircle },
+    { label: 'Add Team Member', href: '/dashboard/team', icon: PlusCircle },
   ];
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-[#0F172A]">Welcome back, {session.user.name}</h1>
-        <p className="text-[#475569] mt-1">Here's what's happening across the HRDC platform today.</p>
+        <h1 className="text-2xl font-bold text-[#0F172A]">Welcome back, {session.user.name || session.user.email || 'Admin'}</h1>
+        <p className="text-[#475569] mt-1">Here&apos;s what&apos;s happening across the HRDC platform today.</p>
       </div>
 
       {/* Stats Grid */}
