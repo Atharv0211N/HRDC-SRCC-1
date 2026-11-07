@@ -3,29 +3,53 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, X, LogOut } from 'lucide-react';
+import { 
+  Menu, 
+  X, 
+  LogOut,
+  LayoutDashboard, 
+  Users, 
+  FolderOpen, 
+  Calendar, 
+  BookOpen, 
+  Home, 
+  BarChart3, 
+  Handshake, 
+  MessageSquare, 
+  Settings, 
+  Shield, 
+  Image as ImageIcon 
+} from 'lucide-react';
 import { signOut } from 'next-auth/react';
-
-interface NavItem {
-  name: string;
-  href: string;
-  icon: any;
-}
 
 interface DashboardShellProps {
   children: React.ReactNode;
-  navItems: NavItem[];
   user: {
     name: string;
     role: string;
   };
 }
 
-export default function DashboardShell({ children, navItems, user }: DashboardShellProps) {
+export default function DashboardShell({ children, user }: DashboardShellProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+
+  const navItems = [
+    { name: 'Overview', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Team', href: '/dashboard/team', icon: Users },
+    { name: 'Projects', href: '/dashboard/projects', icon: FolderOpen },
+    { name: 'Events', href: '/dashboard/events', icon: Calendar },
+    { name: 'Publications', href: '/dashboard/publications', icon: BookOpen },
+    { name: 'Homepage', href: '/dashboard/homepage', icon: Home },
+    { name: 'Statistics', href: '/dashboard/statistics', icon: BarChart3 },
+    { name: 'Partners', href: '/dashboard/partners', icon: Handshake },
+    { name: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
+    { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+    ...(user.role === 'SUPER_ADMIN' ? [{ name: 'Admins', href: '/dashboard/admins', icon: Shield }] : []),
+    { name: 'Media', href: '/dashboard/media', icon: ImageIcon },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -49,7 +73,7 @@ export default function DashboardShell({ children, navItems, user }: DashboardSh
         <div className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(`${item.href}/`));
             return (
               <Link
                 key={item.name}
